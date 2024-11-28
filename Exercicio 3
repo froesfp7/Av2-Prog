@@ -1,0 +1,199 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define ARQUIVO "livros.dat"
+
+// Estrutura para os dados do livro
+typedef struct {
+    int codigo;
+    char titulo[50];
+    char autor[50];
+    int ano;
+} Livro;
+
+// Prototipação das funções
+void adicionarLivro();
+void alterarLivro();
+void excluirLivro();
+void consultarLivro();
+void listarLivros();
+void menu();
+
+int main() {
+    menu();
+    return 0;
+}
+
+// Função para exibir o menu
+void menu() {
+    int opcao;
+    do {
+        printf("\n--- Gerenciamento de Livros ---\n");
+        printf("1. Adicionar livro\n");
+        printf("2. Alterar livro\n");
+        printf("3. Excluir livro\n");
+        printf("4. Consultar livro\n");
+        printf("5. Listar todos os livros\n");
+        printf("0. Sair\n");
+        printf("Escolha uma opção: ");
+        scanf("%d", &opcao);
+        getchar(); // Limpa o buffer do teclado
+
+        switch (opcao) {
+            case 1: adicionarLivro(); break;
+            case 2: alterarLivro(); break;
+            case 3: excluirLivro(); break;
+            case 4: consultarLivro(); break;
+            case 5: listarLivros(); break;
+            case 0: printf("Saindo...\n"); break;
+            default: printf("Opção inválida! Tente novamente.\n");
+        }
+    } while (opcao != 0);
+}
+
+// Função para adicionar um novo livro
+void adicionarLivro() {
+    Livro livro;
+    FILE *arquivo = fopen(ARQUIVO, "ab");
+    if (arquivo == NULL) {
+        printf("Erro ao abrir o arquivo.\n");
+        return;
+    }
+
+    printf("Código do livro: ");
+    scanf("%d", &livro.codigo);
+    getchar();
+    printf("Título do livro: ");
+    fgets(livro.titulo, 50, stdin);
+    livro.titulo[strcspn(livro.titulo, "\n")] = 0; // Remove o '\n'
+    printf("Autor: ");
+    fgets(livro.autor, 50, stdin);
+    livro.autor[strcspn(livro.autor, "\n")] = 0;
+    printf("Ano de publicação: ");
+    scanf("%d", &livro.ano);
+
+    fwrite(&livro, sizeof(Livro), 1, arquivo);
+    fclose(arquivo);
+    printf("Livro adicionado com sucesso!\n");
+}
+
+// Função para alterar os dados de um livro
+void alterarLivro() {
+    int codigo, encontrado = 0;
+    Livro livro;
+    FILE *arquivo = fopen(ARQUIVO, "rb+");
+    if (arquivo == NULL) {
+        printf("Erro ao abrir o arquivo.\n");
+        return;
+    }
+
+    printf("Informe o código do livro a ser alterado: ");
+    scanf("%d", &codigo);
+    while (fread(&livro, sizeof(Livro), 1, arquivo)) {
+        if (livro.codigo == codigo) {
+            encontrado = 1;
+            printf("Novo título: ");
+            getchar();
+            fgets(livro.titulo, 50, stdin);
+            livro.titulo[strcspn(livro.titulo, "\n")] = 0;
+            printf("Novo autor: ");
+            fgets(livro.autor, 50, stdin);
+            livro.autor[strcspn(livro.autor, "\n")] = 0;
+            printf("Novo ano de publicação: ");
+            scanf("%d", &livro.ano);
+
+            fseek(arquivo, -sizeof(Livro), SEEK_CUR);
+            fwrite(&livro, sizeof(Livro), 1, arquivo);
+            printf("Livro alterado com sucesso!\n");
+            break;
+        }
+    }
+    fclose(arquivo);
+
+    if (!encontrado) {
+        printf("Livro não encontrado.\n");
+    }
+}
+
+// Função para excluir um livro pelo código
+void excluirLivro() {
+    int codigo, encontrado = 0;
+    Livro livro;
+    FILE *arquivo = fopen(ARQUIVO, "rb");
+    FILE *temp = fopen("temp.dat", "wb");
+    if (arquivo == NULL || temp == NULL) {
+        printf("Erro ao abrir os arquivos.\n");
+        return;
+    }
+
+    printf("Informe o código do livro a ser excluído: ");
+    scanf("%d", &codigo);
+    while (fread(&livro, sizeof(Livro), 1, arquivo)) {
+        if (livro.codigo == codigo) {
+            encontrado = 1;
+        } else {
+            fwrite(&livro, sizeof(Livro), 1, temp);
+        }
+    }
+    fclose(arquivo);
+    fclose(temp);
+
+    remove(ARQUIVO);
+    rename("temp.dat", ARQUIVO);
+
+    if (encontrado) {
+        printf("Livro excluído com sucesso!\n");
+    } else {
+        printf("Livro não encontrado.\n");
+    }
+}
+
+// Função para consultar informações de um livro pelo código
+void consultarLivro() {
+    int codigo, encontrado = 0;
+    Livro livro;
+    FILE *arquivo = fopen(ARQUIVO, "rb");
+    if (arquivo == NULL) {
+        printf("Erro ao abrir o arquivo.\n");
+        return;
+    }
+
+    printf("Informe o código do livro a ser consultado: ");
+    scanf("%d", &codigo);
+    while (fread(&livro, sizeof(Livro), 1, arquivo)) {
+        if (livro.codigo == codigo) {
+            encontrado = 1;
+            printf("\n--- Informações do Livro ---\n");
+            printf("Código: %d\n", livro.codigo);
+            printf("Título: %s\n", livro.titulo);
+            printf("Autor: %s\n", livro.autor);
+            printf("Ano: %d\n", livro.ano);
+            break;
+        }
+    }
+    fclose(arquivo);
+
+    if (!encontrado) {
+        printf("Livro não encontrado.\n");
+    }
+}
+
+// Função para listar todos os livros cadastrados
+void listarLivros() {
+    Livro livro;
+    FILE *arquivo = fopen(ARQUIVO, "rb");
+    if (arquivo == NULL) {
+        printf("Erro ao abrir o arquivo.\n");
+        return;
+    }
+
+    printf("\n--- Lista de Livros ---\n");
+    while (fread(&livro, sizeof(Livro), 1, arquivo)) {
+        printf("Código: %d\n", livro.codigo);
+        printf("Título: %s\n", livro.titulo);
+        printf("Autor: %s\n", livro.autor);
+        printf("Ano: %d\n\n", livro.ano);
+    }
+    fclose(arquivo);
+}
