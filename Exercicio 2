@@ -1,0 +1,196 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define ARQUIVO "funcionarios.dat"
+
+// Estrutura do funcionário
+typedef struct {
+    int id;
+    char nome[50];
+    char cargo[30];
+    int salario;
+} Funcionario;
+
+// Prototipação das funções
+void cadastrarFuncionario();
+void alterarFuncionario();
+void excluirFuncionario();
+void consultarFuncionario();
+void listarFuncionarios();
+void menu();
+
+int main() {
+    menu();
+    return 0;
+}
+
+// Função para exibir o menu
+void menu() {
+    int opcao;
+    do {
+        printf("\n--- Cadastro de Funcionários ---\n");
+        printf("1. Cadastrar funcionário\n");
+        printf("2. Alterar funcionário\n");
+        printf("3. Excluir funcionário\n");
+        printf("4. Consultar funcionário\n");
+        printf("5. Listar todos os funcionários\n");
+        printf("0. Sair\n");
+        printf("Escolha uma opção: ");
+        scanf("%d", &opcao);
+        getchar(); // Limpa o buffer do teclado
+
+        switch (opcao) {
+            case 1: cadastrarFuncionario(); break;
+            case 2: alterarFuncionario(); break;
+            case 3: excluirFuncionario(); break;
+            case 4: consultarFuncionario(); break;
+            case 5: listarFuncionarios(); break;
+            case 0: printf("Saindo...\n"); break;
+            default: printf("Opção inválida! Tente novamente.\n");
+        }
+    } while (opcao != 0);
+}
+
+// Função para cadastrar um novo funcionário
+void cadastrarFuncionario() {
+    Funcionario funcionario;
+    FILE *arquivo = fopen(ARQUIVO, "ab");
+    if (arquivo == NULL) {
+        printf("Erro ao abrir o arquivo.\n");
+        return;
+    }
+
+    printf("ID do funcionário: ");
+    scanf("%d", &funcionario.id);
+    getchar();
+    printf("Nome: ");
+    fgets(funcionario.nome, 50, stdin);
+    funcionario.nome[strcspn(funcionario.nome, "\n")] = 0; // Remove o '\n'
+    printf("Cargo: ");
+    fgets(funcionario.cargo, 30, stdin);
+    funcionario.cargo[strcspn(funcionario.cargo, "\n")] = 0;
+    printf("Salário (R$): ");
+    scanf("%d", &funcionario.salario);
+
+    fwrite(&funcionario, sizeof(Funcionario), 1, arquivo);
+    fclose(arquivo);
+    printf("Funcionário cadastrado com sucesso!\n");
+}
+
+// Função para alterar dados de um funcionário
+void alterarFuncionario() {
+    int id, encontrado = 0;
+    Funcionario funcionario;
+    FILE *arquivo = fopen(ARQUIVO, "rb+");
+    if (arquivo == NULL) {
+        printf("Erro ao abrir o arquivo.\n");
+        return;
+    }
+
+    printf("Informe o ID do funcionário a ser alterado: ");
+    scanf("%d", &id);
+    while (fread(&funcionario, sizeof(Funcionario), 1, arquivo)) {
+        if (funcionario.id == id) {
+            encontrado = 1;
+            printf("Novo cargo: ");
+            getchar();
+            fgets(funcionario.cargo, 30, stdin);
+            funcionario.cargo[strcspn(funcionario.cargo, "\n")] = 0;
+            printf("Novo salário (R$): ");
+            scanf("%d", &funcionario.salario);
+
+            fseek(arquivo, -sizeof(Funcionario), SEEK_CUR);
+            fwrite(&funcionario, sizeof(Funcionario), 1, arquivo);
+            printf("Dados do funcionário alterados com sucesso!\n");
+            break;
+        }
+    }
+    fclose(arquivo);
+
+    if (!encontrado) {
+        printf("Funcionário não encontrado.\n");
+    }
+}
+
+// Função para excluir um funcionário
+void excluirFuncionario() {
+    int id, encontrado = 0;
+    Funcionario funcionario;
+    FILE *arquivo = fopen(ARQUIVO, "rb");
+    FILE *temp = fopen("temp.dat", "wb");
+    if (arquivo == NULL || temp == NULL) {
+        printf("Erro ao abrir os arquivos.\n");
+        return;
+    }
+
+    printf("Informe o ID do funcionário a ser excluído: ");
+    scanf("%d", &id);
+    while (fread(&funcionario, sizeof(Funcionario), 1, arquivo)) {
+        if (funcionario.id == id) {
+            encontrado = 1;
+        } else {
+            fwrite(&funcionario, sizeof(Funcionario), 1, temp);
+        }
+    }
+    fclose(arquivo);
+    fclose(temp);
+
+    remove(ARQUIVO);
+    rename("temp.dat", ARQUIVO);
+
+    if (encontrado) {
+        printf("Funcionário excluído com sucesso!\n");
+    } else {
+        printf("Funcionário não encontrado.\n");
+    }
+}
+
+// Função para consultar informações de um funcionário
+void consultarFuncionario() {
+    int id, encontrado = 0;
+    Funcionario funcionario;
+    FILE *arquivo = fopen(ARQUIVO, "rb");
+    if (arquivo == NULL) {
+        printf("Erro ao abrir o arquivo.\n");
+        return;
+    }
+
+    printf("Informe o ID do funcionário a ser consultado: ");
+    scanf("%d", &id);
+    while (fread(&funcionario, sizeof(Funcionario), 1, arquivo)) {
+        if (funcionario.id == id) {
+            encontrado = 1;
+            printf("\n--- Informações do Funcionário ---\n");
+            printf("ID: %d\n", funcionario.id);
+            printf("Nome: %s\n", funcionario.nome);
+            printf("Cargo: %s\n", funcionario.cargo);
+            printf("Salário: R$%d\n", funcionario.salario);
+            break;
+        }
+    }
+    fclose(arquivo);
+
+    if (!encontrado) {
+        printf("Funcionário não encontrado.\n");
+    }
+}
+
+// Função para listar todos os funcionários
+void listarFuncionarios() {
+    Funcionario funcionario;
+    FILE *arquivo = fopen(ARQUIVO, "rb");
+    if (arquivo == NULL) {
+        printf("Erro ao abrir o arquivo.\n");
+        return;
+    }
+
+    printf("\n--- Lista de Funcionários ---\n");
+    while (fread(&funcionario, sizeof(Funcionario), 1, arquivo)) {
+        printf("ID: %d\n", funcionario.id);
+        printf("Nome: %s\n", funcionario.nome);
+        printf("Cargo: %s\n", funcionario.cargo);
+        printf("Salário: R$%d\n\n", funcionario.salario);
+    }
+    fclose(arquivo);
+}
