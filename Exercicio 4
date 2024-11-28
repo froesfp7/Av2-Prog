@@ -1,0 +1,201 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define ARQUIVO "veiculos.dat"
+
+// Estrutura para os dados do veículo
+typedef struct {
+    int id;
+    char modelo[50];
+    char placa[10];
+    int ano;
+} Veiculo;
+
+// Prototipação das funções
+void adicionarVeiculo();
+void alterarVeiculo();
+void excluirVeiculo();
+void consultarVeiculo();
+void listarVeiculos();
+void menu();
+
+int main() {
+    menu();
+    return 0;
+}
+
+// Função para exibir o menu
+void menu() {
+    int opcao;
+    do {
+        printf("\n--- Registro de Veículos ---\n");
+        printf("1. Adicionar veículo\n");
+        printf("2. Alterar veículo\n");
+        printf("3. Excluir veículo\n");
+        printf("4. Consultar veículo pela placa\n");
+        printf("5. Listar todos os veículos\n");
+        printf("0. Sair\n");
+        printf("Escolha uma opção: ");
+        scanf("%d", &opcao);
+        getchar(); // Limpa o buffer do teclado
+
+        switch (opcao) {
+            case 1: adicionarVeiculo(); break;
+            case 2: alterarVeiculo(); break;
+            case 3: excluirVeiculo(); break;
+            case 4: consultarVeiculo(); break;
+            case 5: listarVeiculos(); break;
+            case 0: printf("Saindo...\n"); break;
+            default: printf("Opção inválida! Tente novamente.\n");
+        }
+    } while (opcao != 0);
+}
+
+// Função para adicionar um novo veículo
+void adicionarVeiculo() {
+    Veiculo veiculo;
+    FILE *arquivo = fopen(ARQUIVO, "ab");
+    if (arquivo == NULL) {
+        printf("Erro ao abrir o arquivo.\n");
+        return;
+    }
+
+    printf("ID do veículo: ");
+    scanf("%d", &veiculo.id);
+    getchar();
+    printf("Modelo: ");
+    fgets(veiculo.modelo, 50, stdin);
+    veiculo.modelo[strcspn(veiculo.modelo, "\n")] = 0; // Remove o '\n'
+    printf("Placa: ");
+    fgets(veiculo.placa, 10, stdin);
+    veiculo.placa[strcspn(veiculo.placa, "\n")] = 0;
+    printf("Ano de fabricação: ");
+    scanf("%d", &veiculo.ano);
+
+    fwrite(&veiculo, sizeof(Veiculo), 1, arquivo);
+    fclose(arquivo);
+    printf("Veículo adicionado com sucesso!\n");
+}
+
+// Função para alterar os dados de um veículo
+void alterarVeiculo() {
+    int id, encontrado = 0;
+    Veiculo veiculo;
+    FILE *arquivo = fopen(ARQUIVO, "rb+");
+    if (arquivo == NULL) {
+        printf("Erro ao abrir o arquivo.\n");
+        return;
+    }
+
+    printf("Informe o ID do veículo a ser alterado: ");
+    scanf("%d", &id);
+    while (fread(&veiculo, sizeof(Veiculo), 1, arquivo)) {
+        if (veiculo.id == id) {
+            encontrado = 1;
+            printf("Novo modelo: ");
+            getchar();
+            fgets(veiculo.modelo, 50, stdin);
+            veiculo.modelo[strcspn(veiculo.modelo, "\n")] = 0;
+            printf("Nova placa: ");
+            fgets(veiculo.placa, 10, stdin);
+            veiculo.placa[strcspn(veiculo.placa, "\n")] = 0;
+            printf("Novo ano de fabricação: ");
+            scanf("%d", &veiculo.ano);
+
+            fseek(arquivo, -sizeof(Veiculo), SEEK_CUR);
+            fwrite(&veiculo, sizeof(Veiculo), 1, arquivo);
+            printf("Veículo alterado com sucesso!\n");
+            break;
+        }
+    }
+    fclose(arquivo);
+
+    if (!encontrado) {
+        printf("Veículo não encontrado.\n");
+    }
+}
+
+// Função para excluir um veículo pelo ID
+void excluirVeiculo() {
+    int id, encontrado = 0;
+    Veiculo veiculo;
+    FILE *arquivo = fopen(ARQUIVO, "rb");
+    FILE *temp = fopen("temp.dat", "wb");
+    if (arquivo == NULL || temp == NULL) {
+        printf("Erro ao abrir os arquivos.\n");
+        return;
+    }
+
+    printf("Informe o ID do veículo a ser excluído: ");
+    scanf("%d", &id);
+    while (fread(&veiculo, sizeof(Veiculo), 1, arquivo)) {
+        if (veiculo.id == id) {
+            encontrado = 1;
+        } else {
+            fwrite(&veiculo, sizeof(Veiculo), 1, temp);
+        }
+    }
+    fclose(arquivo);
+    fclose(temp);
+
+    remove(ARQUIVO);
+    rename("temp.dat", ARQUIVO);
+
+    if (encontrado) {
+        printf("Veículo excluído com sucesso!\n");
+    } else {
+        printf("Veículo não encontrado.\n");
+    }
+}
+
+// Função para consultar as informações de um veículo pela placa
+void consultarVeiculo() {
+    char placa[10];
+    int encontrado = 0;
+    Veiculo veiculo;
+    FILE *arquivo = fopen(ARQUIVO, "rb");
+    if (arquivo == NULL) {
+        printf("Erro ao abrir o arquivo.\n");
+        return;
+    }
+
+    printf("Informe a placa do veículo a ser consultado: ");
+    fgets(placa, 10, stdin);
+    placa[strcspn(placa, "\n")] = 0;
+    while (fread(&veiculo, sizeof(Veiculo), 1, arquivo)) {
+        if (strcmp(veiculo.placa, placa) == 0) {
+            encontrado = 1;
+            printf("\n--- Informações do Veículo ---\n");
+            printf("ID: %d\n", veiculo.id);
+            printf("Modelo: %s\n", veiculo.modelo);
+            printf("Placa: %s\n", veiculo.placa);
+            printf("Ano: %d\n", veiculo.ano);
+            break;
+        }
+    }
+    fclose(arquivo);
+
+    if (!encontrado) {
+        printf("Veículo não encontrado.\n");
+    }
+}
+
+// Função para listar todos os veículos cadastrados
+void listarVeiculos() {
+    Veiculo veiculo;
+    FILE *arquivo = fopen(ARQUIVO, "rb");
+    if (arquivo == NULL) {
+        printf("Erro ao abrir o arquivo.\n");
+        return;
+    }
+
+    printf("\n--- Lista de Veículos ---\n");
+    while (fread(&veiculo, sizeof(Veiculo), 1, arquivo)) {
+        printf("ID: %d\n", veiculo.id);
+        printf("Modelo: %s\n", veiculo.modelo);
+        printf("Placa: %s\n", veiculo.placa);
+        printf("Ano: %d\n\n", veiculo.ano);
+    }
+    fclose(arquivo);
+}
